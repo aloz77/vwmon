@@ -3,7 +3,7 @@
 // Vaillant Monitor Server
 // Alexey Ozerov (c) 2014
 // GNU GENERAL PUBLIC LICENSE
-// Ver. 0.10
+// Ver. 0.10c
 
 // Configuration
 
@@ -11,6 +11,7 @@ $db_host	= 'localhost';
 $db_name	= 'dbname';
 $db_user	= 'user';
 $db_pass	= 'password';
+
 $db_table_history  = 'vwmon_history';
 $db_table_commands = 'vwmon_commands';
 
@@ -38,14 +39,9 @@ else
 
 // Open mySQL
 
-$link = mysql_connect($db_host, $db_user, $db_pass);
-if (!$link)
-	error('VWMon ERROR: mySQL fault: ' . mysql_error());
-
-$db_selected = mysql_select_db($db_name, $link);
-if (!$db_selected)
-	error('VWMon ERROR: Database selection fault: ' . mysql_error());
-
+$mysqli = new mysqli($db_host, $db_user, $db_pass, $db_name);
+if (mysqli_connect_error())
+  error ("Database connection failed due to ".mysqli_connect_error());
 
 // *********************************************************
 // Action addrecord
@@ -74,17 +70,17 @@ if (isset($_GET["action"]) && $_GET["action"]=="addrecord")
 		{	if ($field!="action")
 			{
 				if (isset($value) && $value!="NULL")
-					$query .= sprintf("`%s` = '%s', ", mysql_real_escape_string($field), mysql_real_escape_string($value));
+					$query .= sprintf("`%s` = '%s', ", $mysqli->real_escape_string($field), $mysqli->real_escape_string($value));
 				else
-					$query .= sprintf("`%s` = %s, ", mysql_real_escape_string($field), "NULL");
+					$query .= sprintf("`%s` = %s, ", $mysqli->real_escape_string($field), "NULL");
 			}
 		}
 
 		$query = substr($query,0,-2);
 
-		$result = mysql_query($query,$link);
+		$result = $mysqli->query($query);
 		if (!$result)
-			error('VWMon ERROR: Dabase query fault: ' . mysql_error(). ' query: '. $query);
+			error('VWMon ERROR: Dabase query fault: ' . $mysqli->error. ' query: '. $query);
 
 		echo ("OK");
 	}
@@ -99,17 +95,17 @@ else if (isset($_GET["action"]) && $_GET["action"]=="getcommand")
 
 	$query = "SELECT id,command FROM $db_table_commands WHERE status=0 ORDER BY `datetime_created` ASC LIMIT 1";
 	
-	$result = mysql_query($query,$link);
+	$result = $mysqli->query($query);
 	if (!$result)
-		error('Frewe ERROR dabase query fault: ' . mysql_error(). ' query: '. $query);
-	$lastrow = mysql_fetch_assoc($result);
+		error('Frewe ERROR dabase query fault: ' . $mysqli->error. ' query: '. $query);
+	$lastrow = $result->fetch_assoc();
 
 	if ($lastrow) 
 	{	echo ($lastrow['id'].":".$lastrow['command']);
 		$query = "UPDATE $db_table_commands SET status=1 WHERE id='".$lastrow['id']."'";
-		$result = mysql_query($query,$link);
+		$result = $mysqli->query($query);
 		if (!$result)
-			error('Frewe ERROR dabase query fault: ' . mysql_error(). ' query: '. $query);
+			error('Frewe ERROR dabase query fault: ' . $mysqli->error. ' query: '. $query);
 	}
 	else
 		echo ("Not found");
@@ -121,10 +117,10 @@ else if (isset($_GET["action"]) && $_GET["action"]=="getcommand")
 
 else if (isset($_GET["action"]) && $_GET["action"]=="setfeedback" && isset($_GET["id"]) && isset($_GET["feedback"]))
 {
-	$query = "UPDATE $db_table_commands SET status=2, feedback = '".mysql_real_escape_string($_GET["feedback"])."' WHERE id='".mysql_real_escape_string($_GET["id"])."'";
-	$result = mysql_query($query,$link);
+	$query = "UPDATE $db_table_commands SET status=2, feedback = '".$mysqli->real_escape_string($_GET["feedback"])."' WHERE id='".$mysqli->real_escape_string($_GET["id"])."'";
+	$result = $mysqli->query($query);
 	if (!$result)
-		error('Frewe ERROR dabase query fault: ' . mysql_error(). ' query: '. $query);
+		error('Frewe ERROR dabase query fault: ' . $mysqli->error. ' query: '. $query);
 	echo ("OK");
 }
 

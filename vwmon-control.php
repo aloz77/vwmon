@@ -8,7 +8,7 @@
 
 // Database configuration
 
-$db_server	= 'localhost';
+$db_host	= 'localhost';
 $db_name	= 'dbname';
 $db_user	= 'user';
 $db_pass	= 'password';
@@ -134,8 +134,8 @@ function http_digest_parse($txt)
 
 // Check if mysql extension is available
 
-if (!$error && !function_exists('mysql_connect'))
-{ echo ("<p class=\"error\">There is no mySQL extension available in your PHP installation. Sorry!</p>\n");
+if (!$error && !function_exists('mysqli_connect'))
+{ echo ("<p class=\"error\">There is no mySQLi extension available in your PHP installation. Sorry!</p>\n");
   $error=true;
 }
 
@@ -143,7 +143,7 @@ if (!$error && !function_exists('mysql_connect'))
 
 if (!$error)
 { 
-	$mysqli = new mysqli($db_server, $db_username, $db_password, $db_name);
+	$mysqli = new mysqli($db_host, $db_user, $db_pass, $db_name);
   if (mysqli_connect_errno())
   { echo ("<p class=\"error\">Database connection failed due to ".mysqli_connect_error()."</p>");
     $error=true;
