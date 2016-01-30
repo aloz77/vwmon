@@ -12,6 +12,7 @@
  * 2013-11-10 Run symlinkusb.sh prior to ebusd, check that ebusd reports at least one valid value, reset error counter when a good value found
  * 2013-12-23 First tests with vwmon-control and getcommand
  * 2013-12-25 Fix command feedback URL encoding, max. 3 ebusd errors, get multiple commands in one session
+ * 2016-01-30 Add fhem file output
  
  * TODOs: ???
  */
@@ -31,7 +32,7 @@
 #include <netdb.h>
 #include "http_fetcher.h"
 
-#define PROGRAM_VERSION "0.10"
+#define PROGRAM_VERSION "0.11"
 #define MAX_EBUSD_ERRORS 3
 
 void strcatenc(char *out,char *text,unsigned char urlencode);
@@ -72,6 +73,11 @@ char *vwmon_server_url=NULL, *vwmon_server_key=NULL, *vwmon_server_url_submit=NU
 char *vwmon_server_senddata=NULL, *error_email=NULL, *vwmon_server_commands=NULL;
 int run_interval=0;			// in seconds, 0 means run once and exit, change it by -r option or RunInterval cfg
 int ebusd_err_counter=0;		// restart ebusd when ebusd_err_counter reaches MAX_EBUSD_ERRORS
+
+char *FHEM_errorstring="";
+char *FHEM_file=NULL;
+
+FILE *fd;
 
 char *filebuf=NULL; 			// Will be allocated by html_fetcher
 
@@ -318,6 +324,13 @@ int main(int argc, char **argv)
 				}
 			}
 
+// Create fhem file
+
+  		if (rv==0 && FHEM_file!=NULL)
+  		{ fd = fopen (FHEM_file, "w");
+  			if (fd == NULL)
+  				logger(LOG_ERROR,"main","Error opening FHEM_File %s for writing", FHEM_file);
+  		}
 
 // Send commands to ebusd
 
@@ -367,6 +380,13 @@ int main(int argc, char **argv)
 						strcatenc(output,trim(buf),1);
 						value_found=1;
 						ebusd_err_counter=0;
+
+						if (FHEM_file!=NULL && fd != NULL)
+						{ logger(LOG_DEBUG,"main","Writing to FHEM file %s", FHEM_file);
+  					  fprintf(fd,"%s:%s\n",dfp->field,trim(buf));
+						}
+
+
 					}
 					
 					dfp=dfp->next;
@@ -380,6 +400,12 @@ int main(int argc, char **argv)
 					rv=1;
 				}
 			}
+
+// Close fhem file
+
+  		if (FHEM_file!=NULL && fd != NULL)
+  		{ fclose(fd);
+  		}
 
 // Send data to vwmon-server
 
@@ -522,7 +548,9 @@ struct cfgvar
 	{"ebusd_Host","%s",&ebusd_host},
 	{"ebusd_Port","%s",&ebusd_port},
 	{"ebusd_Command","%s",&ebusd_command},
-	{"RunInterval","%d",&run_interval}
+	{"RunInterval","%d",&run_interval},
+	{"FHEM_File","%s",&FHEM_file},
+	{"FHEM_ErrorString","%s",&FHEM_errorstring}
 };
 
 int read_cfg(char *fname)
